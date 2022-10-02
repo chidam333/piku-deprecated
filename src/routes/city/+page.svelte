@@ -62,7 +62,7 @@
     <div class="hmm">
             <div class="search" >
                 <form on:submit|preventDefault={prompt}>
-                        <input type="text" class="kuch md:left-1/4 lg:left-1/3 w-2/3 md:w-1/2 lg:w-1/3" class:haselements={hasElements} class:instate={state} placeholder="Your city" bind:value={city} on:input|preventDefault={handlechange(city)}> 
+                        <input type="text" class="kuch md:left-1/4 lg:left-1/3 w-2/3 md:w-1/2 lg:w-1/3" class:haselements={hasElements} class:instate={state} placeholder="Your primary city" bind:value={city} on:input|preventDefault={handlechange(city)}> 
                         {#await promise}
                             🔃Loading ...
                         {:then citylist} 

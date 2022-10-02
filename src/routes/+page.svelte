@@ -12,7 +12,7 @@
             <form method="POST" action="?/login" class="lg:right-5 grid justify-center grid-rows-2 md:flex md:justify-center md:mt-5 lg:absolute z-33 lg:block font-extrabold">
                 <label for="user" class="text-indigo-300 text-2xl font-semibold ">Username:</label>
                 <input type="text" name="loguser" id="user" class="md:mr-5 pl-2 h-7" required>
-                <label for="pass" class="text-indigo-300 text-2xl font-semibold">Password:</label>
+                <label for="logpass" class="text-indigo-300 text-2xl font-semibold">Password:</label>
                 <input type="password" name="logpass" id="logpass" class="pl-2 h-7" required>
                 <input  type="submit" value="Login" class="bg-lime-300 md:ml-5 md:-mt-1 w-fit mt-4 mx-0 cursor-pointer text-black text-xl font-extrabold px-2 md:mx-2">
             </form>
