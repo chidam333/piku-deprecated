@@ -1,0 +1,1 @@
+(<form method="POST" action="/city"><input type="submit" class="underline cursor-pointer" value="logout" /></form> )

@@ -1,6 +1,7 @@
 
 <script>
     import Chakra from "../../chakra.svelte";
+  import Logout from "../../logout.svelte";
     let city,city1,city2,city3 = Array(4).fill("")
     let len = 0
     let settledcity=""
@@ -56,8 +57,7 @@
     }
 </script>
 <main>
-    <form name="logout" method="POST">
-    <div class="pihead absolute grid w-screen justify-center">Piku your city now<span>(logout)</span></div></form>
+    <div class="pihead absolute flex w-screen justify-center">Piku your city now <Logout/></div>
     <div class="piku absolute text-8xl text-center w-screen mt-24 text-amber-200">piku</div>
     <div class="hmm">
             <div class="search" >
@@ -189,7 +189,7 @@
         outline: none;
     }
     .hmm{
-        background: url("./city.svg");
+        background: url("../../city.svg");
         width: 100vw;
         height: 100vh;
     }
