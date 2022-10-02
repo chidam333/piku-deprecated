@@ -1,6 +1,5 @@
 /** @type {import('./$types').Actions} */
-import {error, redirect} from '@sveltejs/kit';
-import { invalid } from '@sveltejs/kit';
+import {invalid, redirect} from '@sveltejs/kit';
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from 'uuid';
 export const actions = {
@@ -12,10 +11,11 @@ export const actions = {
       const{redis} = locals;
       const psdata = await sql `select * from pikuusers where username=${username}`
       const compare = await bcrypt.compare(password,psdata[0].password);
+      if(!compare){return invalid(400, {cred:true})}
       if(compare){
         const sessionid=uuidv4();
         cookies.set("sessionid",sessionid)
-        redis.set(`${username}`, `${sessionid}`);
+        redis.set(`${sessionid}`,`${username}`);
         redis.expire(`${username}`,15*60)
         console.log("done!!")
         throw redirect(307,'/city')

@@ -44,9 +44,9 @@
             {#if form?.success}
                 <div class="scsmsg bg-lime-300 text-lime-900 text-center mx-4 py-2 border-2 border-black my-4">You are registered ^_~ !! <div class="s">Your username is {data.username}</div></div>
             {/if}
-            <!-- {#if form?.success}
+            {#if form?.cred}
                 <div class="scsmsg bg-red-300 text-red-900 text-center mx-4 py-2 border-2 border-black my-4">Your password is wrong or your username doesn't exist</div>
-            {/if} -->
+            {/if}
         </div>
         
     </section>

@@ -10,9 +10,9 @@ export async function GET({url,cookies}){
     const data = await response.json()
     // return new Response(JSON.stringify(data))
     return json(data)
-    if(!response.ok){
-        console.log("Redirecting to index hmm ):")
-        throw error(400,'Can fetch data ! sorrry')
-    }
+    // if(!response.ok){
+    //     console.log("Redirecting to index hmm ):")
+    //     throw error(400,'Can fetch data ! sorrry')
+    // }
 
 }

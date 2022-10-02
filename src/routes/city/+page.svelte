@@ -56,7 +56,8 @@
     }
 </script>
 <main>
-    <div class="pihead absolute grid w-screen justify-center">Piku your city now</div>
+    <form name="logout" method="POST">
+    <div class="pihead absolute grid w-screen justify-center">Piku your city now<span>(logout)</span></div></form>
     <div class="piku absolute text-8xl text-center w-screen mt-24 text-amber-200">piku</div>
     <div class="hmm">
             <div class="search" >
