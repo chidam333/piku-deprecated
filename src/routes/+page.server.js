@@ -65,7 +65,7 @@ export const actions = {
           html:`
           <h1>Hello ! your username is  ${name} <h1/>
           <b>Please click the following link to verify your account<b/>
-          <div><a href="${r}}verify?verify=${sessionid2}" target="_blank">${r}/verify?verify=${sessionid2}</a></div>
+          <div><a href="${r}verify?verify=${sessionid2}" target="_blank">${r}/verify?verify=${sessionid2}</a></div>
           `
         })
         console.log("Message sent: %s", info.messageId);
