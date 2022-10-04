@@ -1,6 +1,6 @@
 /** @type {import('./$types').Actions} */
 import {invalid, redirect} from '@sveltejs/kit';
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from 'uuid';
 // /** @type {import('@sveltejs/kit').Handle} */
