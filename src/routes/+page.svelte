@@ -4,7 +4,7 @@
   export let form;
 
 </script>
-<main class="h-screen relative overflow-hidden">
+<main class="h-screen min-w-[2500px] relative overflow-hidden">
     <nav class="bg-amber-900 h-72 md:h-40 lg:h-20 w-screen grid grid-rows-3 lg:grid-cols-4 gap-4">
         <div class="logo text-amber-200 text-4xl lg:text-6xl lg:ml-10 text-center h-10 lg:h-full row-span-1 lg:col-span-1">piku</div>
         <div class="form lg:col-span-3 lg:relative h-full row-span-2">
