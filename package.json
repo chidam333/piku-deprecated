@@ -30,5 +30,8 @@
 		"puppeteer": "^18.0.5",
 		"redis": "^4.3.1",
 		"uuid": "^9.0.0"
+	},
+	"resolutions": {
+		"supports-color": "^8"
 	}
 }
