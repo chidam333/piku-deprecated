@@ -5,6 +5,7 @@ import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from 'uuid';
 // /** @type {import('@sveltejs/kit').Handle} */
 const p = process.env.E_PASS
+const r = process.env.R;
 export const actions = {
     login: async({locals,request,cookies})=>{
       const data = await request.formData();
@@ -64,7 +65,7 @@ export const actions = {
           html:`
           <h1>Hello ! your username is  ${name} <h1/>
           <b>Please click the following link to verify your account<b/>
-          <div><a href="http://localhost:5173/verify?verify=${sessionid2}" target="_blank">http://localhost:5173/verify?verify=${sessionid2}</a></div>
+          <div><a href="${r}}verify?verify=${sessionid2}" target="_blank">${r}/verify?verify=${sessionid2}</a></div>
           `
         })
         console.log("Message sent: %s", info.messageId);

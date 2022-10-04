@@ -3,7 +3,7 @@
 	export let data;
     let name,realdata;
     onMount(async()=>{
-        const response = await fetch(`http://localhost:5173/api/verify?verify=${data.token}`)
+        const response = await fetch(data.fetchurl)
         realdata = await response.json()
         name= await realdata.name
     })

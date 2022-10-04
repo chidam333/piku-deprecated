@@ -1,4 +1,5 @@
 /** @type {import('./$types').PageLoad} */
+const r = process.env.R;
 export function load({ url }) {
-    return {token:url.searchParams.get('verify')}
+    return {fetchurl:`${r}api/verify?verify=${url.searchParams.get('verify')}`}
   }
