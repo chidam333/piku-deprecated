@@ -1,13 +1,13 @@
 <script>
-  import { onMount } from "svelte";
+//   import { onMount } from "svelte";
 	export let data;
     let name,realdata;
-    onMount(async()=>{
-        console.log(data.fetchurl)
-        const response = await fetch(data.fetchurl)
-        realdata = await response.json()
-        name= await realdata.name
-    })
+    // onMount(async()=>{
+    //     console.log(data.fetchurl)
+    //     const response = await fetch(data.fetchurl)
+    //     realdata = await response.json()
+    //     name= await realdata.name
+    // })
 </script>
 <main>
     <div>
