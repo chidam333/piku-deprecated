@@ -1,6 +1,5 @@
 <script>
-  /** @type {import('./$types').PageData} */
-  export let data;
+
   /** @type {import('./$types').ActionData} */
   export let form;
 
@@ -32,20 +31,26 @@
                 <input type="email" class="pl-2" placeholder="dev@chidam.xyz" id="email" name="email">
                 </label>
                 <label for="pass">Password :
-                <input type="password" class="pl-2" id="pass" name="pass" placeholder="*********">
+                <input type="password" class="pl-2" id="pass" name="pass" placeholder="*********" required>
                 </label>
                 <label for="pass1">Re-enter: &nbsp;&nbsp;&nbsp;
-                <input type="password" class="pl-2" id="pass1" name="pass1" placeholder="*********">
+                <input type="password" class="pl-2" id="pass1" name="pass1" placeholder="*********" required>
                 </label>
                 <div class="wrap">
                     <input type="submit" value="Signup" class="leading-2 bg-lime-300 font-extrabold w-fit text-center px-10 py-2 border-2 cursor-pointer border-black">
                 </div>
             </form>
             {#if form?.success}
-                <div class="scsmsg bg-lime-300 text-lime-900 text-center mx-4 py-2 border-2 border-black my-4">You are registered ^_~ !! <div class="s">Your username is {data.username}</div></div>
+                <div class="scsmsg bg-lime-300 text-lime-900 text-center mx-4 py-2 border-2 border-black my-4">A verification link is sent ^_~ <div class="s">to&nbsp;<span class="ok text-black" >{form?.email}</span>, find your username there</div></div>
             {/if}
             {#if form?.cred}
                 <div class="scsmsg bg-red-300 text-red-900 text-center mx-4 py-2 border-2 border-black my-4">Your password is wrong or your username doesn't exist</div>
+            {/if}
+            {#if form?.exist}
+                <div class="scsmsg bg-red-300 text-red-900 text-center mx-4 py-2 border-2 border-black my-4">Your profile exists {form?.name}</div>
+            {/if}
+            {#if form?.missing}
+                <div class="scsmsg bg-red-300 text-red-900 text-center mx-4 py-2 border-2 border-black my-4">The password doesn't match</div>
             {/if}
         </div>
         
@@ -60,7 +65,7 @@
     .dar{
         background: rgb(0, 0, 0,0.7);
     }
-    nav,.signup input,.scsmsg{
+    nav,.signup input,.scsmsg {
         font-weight: 900;
         font-family: 'Inconsolata'
     }
