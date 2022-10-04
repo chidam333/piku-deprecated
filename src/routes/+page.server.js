@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from 'uuid';
 // /** @type {import('@sveltejs/kit').Handle} */
 const p = process.env.E_PASS
-const r = process.env.R;
+const r = "https://piku.chidam.xyz/";
 export const actions = {
     login: async({locals,request,cookies})=>{
       const data = await request.formData();
