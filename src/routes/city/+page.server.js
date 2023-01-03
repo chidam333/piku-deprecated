@@ -5,9 +5,11 @@ const MMI_CLIENT_SEC = import.meta.env.VITE_MMI_CLIENT_SEC;
 export async function load({locals,cookies}) {
     const sessionid = cookies.get("sessionid");
     const {redis} =locals;
+    const {username} = locals;
+    console.log(username)
     console.log("session id is : ",sessionid)
-    const redsid = await redis.get("bug")
-    if(!(redsid==sessionid)){
+    const redsid = await redis.get(`${username}`)
+    if(username===null){
         throw redirect(302,"/")
     }else{
         const data={
@@ -35,5 +37,17 @@ export async function load({locals,cookies}) {
             console.log("shit happens")
             throw error(302,'it is what it it is')
         }
+    }
+}
+
+/** @type {import('./$types').Actions} */
+export const actions = {
+    default: async({locals,cookies})=>{
+        const temp = cookies.get("sessionid")
+        cookies.delete("sessionid")
+        const {redis} =locals
+        console.log(temp)
+        const reddel = await redis.del(temp)
+        throw redirect(302,'/')
     }
 }

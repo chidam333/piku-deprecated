@@ -1,6 +1,7 @@
 
 <script>
     import Chakra from "../../chakra.svelte";
+  import Logout from "../../logout.svelte";
     let city,city1,city2,city3 = Array(4).fill("")
     let len = 0
     let settledcity=""
@@ -56,12 +57,12 @@
     }
 </script>
 <main>
-    <div class="pihead absolute grid w-screen justify-center">Piku your city now</div>
+    <div class="pihead absolute flex w-screen justify-center">Piku your city now <Logout/></div>
     <div class="piku absolute text-8xl text-center w-screen mt-24 text-amber-200">piku</div>
     <div class="hmm">
             <div class="search" >
                 <form on:submit|preventDefault={prompt}>
-                        <input type="text" class="kuch md:left-1/4 lg:left-1/3 w-2/3 md:w-1/2 lg:w-1/3" class:haselements={hasElements} class:instate={state} placeholder="Your city" bind:value={city} on:input|preventDefault={handlechange(city)}> 
+                        <input type="text" class="kuch md:left-1/4 lg:left-1/3 w-2/3 md:w-1/2 lg:w-1/3" class:haselements={hasElements} class:instate={state} placeholder="Your primary city" bind:value={city} on:input|preventDefault={handlechange(city)}> 
                         {#await promise}
                             🔃Loading ...
                         {:then citylist} 
@@ -188,7 +189,7 @@
         outline: none;
     }
     .hmm{
-        background: url("./city.svg");
+        background: url("../../city.svg");
         width: 100vw;
         height: 100vh;
     }
