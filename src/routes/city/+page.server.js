@@ -12,6 +12,7 @@ export async function load({locals,cookies}) {
     if(username===null){
         throw redirect(302,"/")
     }else{
+        console.log({MMI_CLIENT_ID},{MMI_CLIENT_SEC})
         const data={
             "grant_type": "client_credentials",
             "client_id": MMI_CLIENT_ID,
@@ -23,6 +24,7 @@ export async function load({locals,cookies}) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         const response = await request.json()
+        console.log({response})
         if(response){
             console.log(response)
             console.log("Sometimes works too.")

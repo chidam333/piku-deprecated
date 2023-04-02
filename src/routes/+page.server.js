@@ -19,7 +19,11 @@ export const actions = {
       if(compare){
         const sessionid=uuidv4();
         cookies.set("sessionid",sessionid)
-        redis.set(`${sessionid}`,`${username}`);
+        try{
+          redis.set(`${sessionid}`,`${username}`);
+        }catch(err){
+          throw redirect("/error",404)
+        }
         redis.expire(`${sessionid}`,15*60)
         console.log("done!!")
         throw redirect(307,'/city')
@@ -31,6 +35,7 @@ export const actions = {
       const trimemail = email.trim()
       const name = email.split("@")[0]
       const {sql} = locals
+      console.log({sql})
       let hakya = await sql `select exists(select username from pikuusers where username=${name})`
       console.log("hakya is",hakya[0].exists)
       if(hakya[0].exists){return {name,exist:true}}
@@ -41,7 +46,6 @@ export const actions = {
       else{
         console.log(name,email,pass,pass1);
         let details = {myemail:"verify@chidam.xyz",mypass:p}
-        console.log("pass is ",details.mypass)
         const salt =await bcrypt.genSalt(9)
         const hashpass = await bcrypt.hash(pass,salt)
         const{redis}=locals;
@@ -65,7 +69,7 @@ export const actions = {
           html:`
           <h1>Hello ! your username is  ${name} <h1/>
           <b>Please click the following link to verify your account<b/>
-          <div><a href="${r}verify?verify=${sessionid2}" target="_blank">${r}/verify?verify=${sessionid2}</a></div>
+          <div><a href="${r}verify?verify=${sessionid2}" target="_blank">${r}verify?verify=${sessionid2}</a></div>
           `
         })
         console.log("Message sent: %s", info.messageId);

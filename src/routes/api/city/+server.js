@@ -8,11 +8,5 @@ export async function GET({url,cookies}){
     const response = await fetch(`https://atlas.mapmyindia.com/api/places/geocode?address=${address}&bias=1&podFilter=city&itemCount=2`,
     {headers: {'Authorization': `Bearer ${value}`}})
     const data = await response.json()
-    // return new Response(JSON.stringify(data)) 
-    return json(data) //json is a nice helper function to send a response after stringifing the data
-    // if(!response.ok){
-    //     console.log("Redirecting to index hmm ):")
-    //     throw error(400,'Can fetch data ! sorrry')
-    // }
-
+    return json(data) 
 }

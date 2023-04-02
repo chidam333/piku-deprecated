@@ -3,6 +3,7 @@ import 'dotenv/config'
 import Redis from "ioredis";
 /** @type {import('@sveltejs/kit').Handle} */
 const urlo=process.env.POSTGRES_URL
+console.log({urlo})
 /** @type {import('@sveltejs/kit').Handle} */
 const redisurl=process.env.REDIS_URL
 export async function handle({ event, resolve }) {

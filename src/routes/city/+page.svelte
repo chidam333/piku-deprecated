@@ -1,6 +1,5 @@
 
 <script>
-    import Chakra from "../../chakra.svelte";
   import Logout from "../../logout.svelte";
     let city,city1,city2,city3 = Array(4).fill("")
     let len = 0
