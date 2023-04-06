@@ -76,7 +76,7 @@
         {#if state}
             <div class="state kuch md:left-1/4 lg:left-1/3 w-2/3 md:w-1/2 lg:w-1/3" class:selectedsec={state}>
                 <div class="cityname">{settledcity}</div>
-                <div class="letsgo" on:click={()=>{}}>Lesgooo</div>
+                <a class="letsgo" href="/city/{settledcity}">Lesgooo</a>
             </div>            
         {/if}
     </div>
