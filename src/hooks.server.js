@@ -17,6 +17,10 @@ export async function handle({ event, resolve }) {
         sql:sql,
         redis:redis,
     }
-    const response = await resolve(event);
+    let response = await resolve(event);
+    if (event.url.pathname.startsWith('/create')) {
+        response.headers.append('Cross-Origin-Embedder-Policy', `require-corp`);
+        response.headers.append('Cross-Origin-Opener-Policy', `same-origin`);
+    }
     return response;
 }

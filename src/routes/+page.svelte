@@ -1,10 +1,15 @@
 <script>
-
+  import { onMount } from 'svelte';
+  let minHeight;
+  onMount(()=>{
+    const vp = document.querySelector("main");
+    vp.style.minHeight=window.innerHeight;
+  })
   /** @type {import('./$types').ActionData} */
   export let form;
 
 </script>
-<main class="h-screen min-h-[900px] relative overflow-hidden bg-amber-200">
+<main class="h-screen relative overflow-hidden bg-amber-200">
     <nav class="bg-amber-900 h-72 md:h-40 lg:h-20 w-screen grid grid-rows-3 lg:grid-cols-4 gap-4">
         <div class="logo text-amber-200 text-4xl lg:text-6xl lg:ml-10 text-center h-10 lg:h-full row-span-1 lg:col-span-1">piku</div>
         <div class="form lg:col-span-3 lg:relative h-full row-span-2">
@@ -17,7 +22,7 @@
             </form>
         </div>
     </nav>
-    <section class="grid grid-cols-6 h-screen w-screen absolute top-0 left-0 mt-72 md:mt-40 lg:mt-20 mb-20">
+    <section class="grid grid-cols-6 h-screen w-screen absolute top-0 left-0 mt-72 md:mt-40 lg:mt-20">
         <div class="hidden lg:block imgover col-span-4 w-full relative bg-stone-900">
             <img class="w-full" src="https://images.unsplash.com/photo-1599831069477-b2acdc0bcb91?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80" alt="">
             <div class="dar w-full h-full absolute top-0 left-0 ">
