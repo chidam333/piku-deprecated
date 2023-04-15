@@ -6,9 +6,9 @@
     import html2canvas from 'html2canvas';
     import 'maplibre-gl/dist/maplibre-gl.css';
     let availableFeatures = ["zooming","panning","tilt","create-itinerary"]
-    let active="zooming"
+    $: active="panning"
     let map=null,ffmpeg;
-    let lon=80.28,lat=13.077,minz=3,maxz=6;
+    let lon=80.28,lat=13.077,minz=3,maxz=6,lonFrom=80.28,latFrom=13.077,lonTo=-73.9808,latTo=40.7648;
     onMount(async()=>{
         map = new maplibregl.Map({
             container: 'map',
@@ -21,6 +21,104 @@
         await ffmpeg.load()
 
     })
+    class panner{
+        constructor(map,latFrom,lonFrom,latTo,lonTo){
+            this.map=map
+            this.latFrom=latFrom
+            this.lonFrom=lonFrom
+            this.latTo=latTo
+            this.lonTo=lonTo
+            this.canvasarr=[]
+            this.skip=false
+            this.zoom=3
+            this.time=2000
+            this.factor=30
+        }
+        setView(){
+            map.flyTo({
+                center:[this.lonFrom,this.latFrom],
+                zoom:this.zoom,
+                duration:0
+            })
+        }
+        pan(){
+            let xDist,yDist;
+            let isLeft,isDown;
+            let xStep,yStep;
+            let skip= this.skip,lonFrom=this.lonFrom,lonTo=this.lonTo,latFrom=this.latFrom,latTo=this.latTo,map=this.map,zoom=this.zoom,canvasarr=this.canvasarr;
+            if(lonFrom>lonTo){
+                isLeft=true
+                xDist=this.lonFrom-this.lonTo
+            }else{
+                isLeft=false
+                xDist=this.lonTo-this.lonFrom
+            }
+            if(latFrom>latTo){
+                isDown=true
+                yDist=this.latFrom-latTo
+            }else{
+                isDown=false
+                yDist=this.latTo-this.latFrom
+            }
+            xStep = xDist/(this.time/this.factor)
+            yStep = yDist/(this.time/this.factor)
+            this.setView()
+            let looper = setInterval(()=>{
+                if(skip==false){
+                    if(isLeft && lonFrom<=lonTo){
+                        clearInterval(looper)
+                        merge(canvasarr)
+                    }
+                    if(!isLeft && lonFrom>=lonTo){
+                        clearInterval(looper)
+                        merge(canvasarr)
+                    }
+                    map.flyTo({
+                        center:[lonFrom,latFrom],
+                        zoom:zoom,
+                        duration:0
+                    })
+                    skip=true
+                    setTimeout(()=>{
+                        html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
+                            async function(canvas){
+                                document.body.append(canvas)
+                                canvas.toBlob(async(blob)=>{
+                                    const arrayBuffer=await blob.arrayBuffer();
+                                    canvasarr.push(arrayBuffer)
+                                })
+                                if(isLeft){lonFrom-=xStep;}
+                                else{lonFrom+=xStep;}
+                                if(isDown){latFrom+=yStep;}
+                                else{
+                                    latFrom+=yStep;
+                                }
+                                skip=false
+                            }
+                        )
+                    })
+                }
+            },200)
+            const merge = async(canvasarr)=>{
+                console.log({canvasarr})
+                for(let i=0;i<canvasarr.length;i++){
+                    await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
+                    console.log(`Wrote ${i} file`)
+                }
+                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
+                const data = await ffmpeg.FS('readFile', 'out.mp4');
+                console.log({data})
+                console.log({canvasarrLen:canvasarr.length})
+                // for(let i=0;i<canvasarr.length-1;i++){
+                //     await ffmpeg.FS('unlink', `temp.${i}.png`);
+                // }
+                const video = document.getElementById('output-video');
+                video.style.display= "block"
+                video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                this.canvasarr=[]
+            }
+        }
+    }
     class zoomer{
         constructor(map,min,max,lat,lon){
             this.min=min
@@ -45,15 +143,12 @@
             let max = this.max
             let skip = false
             let zoomRate = this.zoomRate
-            map.flyTo({
-                center: [this.lon, this.lat],
-                zoom: this.min,
-                duration: 0
-            });
+            this.setView()
             let looper = setInterval(()=>{
                 if(skip==false){
                     if(min>=max){
                         clearInterval(looper)
+                        merge(canvasarr)
                     }
                     map.setZoom(min)
                     skip=true
@@ -69,11 +164,6 @@
                     )},200)
                 }
             },200)
-            map.flyTo({
-                center: [this.lon, this.lat],
-                zoom: this.min,
-                duration: 0
-            });
             const merge = async(canvasarr)=>{
                 console.log({canvasarr})
                 for(let i=0;i<canvasarr.length;i++){
@@ -83,26 +173,24 @@
                 await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
-                for(let i=0;i<canvasarr.length;i++){
-                    await ffmpeg.FS('unlink', `temp.${i}.png`);
-                }
+                console.log({canvasarrLen:canvasarr.length})
+                // for(let i=0;i<canvasarr.length-1;i++){
+                //     await ffmpeg.FS('unlink', `temp.${i}.png`);
+                // }
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 this.canvasarr=[]
             }
-            let looper2 = setInterval(()=>{
-                console.log({"needed":max,"length":min})
-                if(min>=max){
-                    merge(canvasarr)
-                    clearInterval(looper2)
-                }
-            },1000)
         }
     }
     const first = new zoomer(map,minz,maxz,lat,lon)
     const zoomObjInit=()=>{
         first.zoom()
+    }
+    const PanObjInit=()=>{
+        const panobj = new panner(map,latFrom,lonFrom,latTo,lonTo)
+        panobj.pan()
     }
     const updateFirst=()=>{
         first.min=minz;
@@ -110,7 +198,7 @@
         first.lat=lat;
         first.lon=lon;
         first.setView();
-    }
+    }  
 </script>
 <div class="layout flex">
     <div class="side-bar h-[100vh] w-[12vw] bg-black border-r-2 border-amber-400">
@@ -128,24 +216,39 @@
     </nav>
     <div class="black-bar absolute top-0 left-0 h-[4vh] -z-10 bg-black w-[100vw]"></div>
     <div class="inp-out ml-56 mt-14 absolute">
-        <div class="params bg-black w-[600px] h-32 mb-4">
+        <div class="params bg-black max-w-[800px] h-32 mb-4">
             <h3 class="text-amber-200 font-mono px-6 py-2">params</h3>
             <div class="inp-flex flex gap-4">
-                <div class="grid gap-2 ml-4">
-                    <label for="lat" class="text-amber-200 font-mono">lat :&nbsp;<input type="number" class="text-black" step="0.01" id="lat" bind:value={lat} on:input={updateFirst}></label>
-                    <label for="lon" class="text-amber-200 font-mono">lon :&nbsp;<input type="number" class="text-black" step="0.01" id="lon" bind:value={lon} on:input={updateFirst}></label>
-                </div>
-                <div class="grid gap-2 ml-4">
-                    <label for="min-zoom" class="text-amber-200 font-mono">min-zoom :&nbsp;<input type="number" class="text-black" id="min-zoom" bind:value={minz} on:input={updateFirst}></label>
-                    <label for="max-zoom" class="text-amber-200 font-mono">max-zoom :&nbsp;<input type="number" class="text-black" id="max-zoom" bind:value={maxz} on:input={updateFirst}></label>
-                </div>
+                {#if active=="zooming"}
+                    <div class="grid gap-2 ml-4">
+                        <label for="lat" class="text-amber-200 font-mono">lat :&nbsp;<input type="number" class="text-black" step="0.01" id="lat" bind:value={lat} on:input={updateFirst}></label>
+                        <label for="lon" class="text-amber-200 font-mono">lon :&nbsp;<input type="number" class="text-black" step="0.01" id="lon" bind:value={lon} on:input={updateFirst}></label>
+                    </div>
+                    <div class="grid gap-2 ml-4">
+                        <label for="min-zoom" class="text-amber-200 font-mono">min-zoom :&nbsp;<input type="number" class="text-black" id="min-zoom" bind:value={minz} on:input={updateFirst}></label>
+                        <label for="max-zoom" class="text-amber-200 font-mono">max-zoom :&nbsp;<input type="number" class="text-black" id="max-zoom" bind:value={maxz} on:input={updateFirst}></label>
+                    </div>
+                {/if}
+                {#if active=="panning"}
+                    <div class="grid gap-2 ml-4">
+                        <label for="latPanfrom" class="text-amber-200 font-mono">lat-from :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanfrom" bind:value={latFrom} on:input={updateFirst}></label>
+                        <label for="lonPAnfrom" class="text-amber-200 font-mono">lon-from :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanfrom" bind:value={lonFrom} on:input={updateFirst}></label>
+                    </div>
+                    <div class="grid gap-2 ml-4">
+                        <label for="latPanto" class="text-amber-200 font-mono">lat-to :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanto" bind:value={latTo} on:input={updateFirst}></label>
+                        <label for="lonPAnto" class="text-amber-200 font-mono">lon-to :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanto" bind:value={lonTo} on:input={updateFirst}></label>
+                    </div>
+                {/if}
             </div>
         </div>
         <div class="map-contain grid grid-flow-col gap-6 w-[80vw] grid-cols-2">
             <div id="map" class=" border-2 border-black aspect-video "></div>
             <video src="" id="output-video" class="border-2 border-black aspect-video" style="display:none" controls></video>
         </div>
-        <button on:click={()=>{zoomObjInit()}} class="generate px-4 py-2 bg-lime-500 text-2xl font-serif mt-6">
+        <button on:click={()=>{
+            if(active=="zooming"){zoomObjInit()}
+            if(active=="panning"){PanObjInit()}
+        }} class="generate px-4 py-2 bg-lime-500 text-2xl font-serif mt-6">
             generate
         </button>
     </div>
