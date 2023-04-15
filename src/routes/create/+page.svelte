@@ -4,11 +4,12 @@
     import { onMount } from 'svelte';
     import {createFFmpeg,fetchFile} from "@ffmpeg/ffmpeg";
     import html2canvas from 'html2canvas';
+    import 'maplibre-gl/dist/maplibre-gl.css';
     let availableFeatures = ["zooming","panning","tilt","create-itinerary"]
     let active="zooming"
     let map=null,ffmpeg;
     let lon=80.28,lat=13.077,minz=3,maxz=6;
-    onMount(()=>{
+    onMount(async()=>{
         map = new maplibregl.Map({
             container: 'map',
             style: 'https://demotiles.maplibre.org/style.json', // stylesheet location
@@ -17,6 +18,8 @@
             preserveDrawingBuffer: true // starting zoom
         }); 
         ffmpeg = createFFmpeg({ log: true });
+        await ffmpeg.load()
+
     })
     class zoomer{
         constructor(map,min,max,lat,lon){
@@ -27,6 +30,7 @@
             this.skip=false
             this.map=map
             this.canvasarr = []
+            this.zoomRate=0.1
         }
         setView(){
             map.flyTo({
@@ -40,6 +44,7 @@
             let min = this.min
             let max = this.max
             let skip = false
+            let zoomRate = this.zoomRate
             map.flyTo({
                 center: [this.lon, this.lat],
                 zoom: this.min,
@@ -47,19 +52,18 @@
             });
             let looper = setInterval(()=>{
                 if(skip==false){
-                    if(min>max){
+                    if(min>=max){
                         clearInterval(looper)
                     }
                     map.setZoom(min)
                     skip=true
                     setTimeout(()=>{html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
                         async function(canvas){
-                            document.querySelector("#img").append(canvas)
-                            const blob = canvas.toBlob(async(blob)=>{
+                            canvas.toBlob(async(blob)=>{
                                 const arrayBuffer = await blob.arrayBuffer();
                                 canvasarr.push(arrayBuffer)
                             });
-                            min+=1
+                            min+=zoomRate
                             skip=false
                         }
                     )},200)
@@ -70,31 +74,30 @@
                 zoom: this.min,
                 duration: 0
             });
-            const merge = async()=>{
-                await ffmpeg.load().then(console.log("yahh loaded"))
-                let num=0;
-                for(const arrayBuffer of canvasarr){
-                    await ffmpeg.FS('writeFile', `temp.${num}.png`, new Uint8Array(arrayBuffer));
-                    num++
-                    console.log(`Wrote ${num-1} file`)
+            const merge = async(canvasarr)=>{
+                console.log({canvasarr})
+                for(let i=0;i<canvasarr.length;i++){
+                    await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
+                    console.log(`Wrote ${i} file`)
                 }
-                setTimeout(async()=>{
-                    await ffmpeg.run('-i','temp.1.png', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', 'out.mp4').then(
-                        function(video){
-                            console.log({video})
-                        }
-                    )
-                    const data = await ffmpeg.FS('readFile', 'out.mp4');
-                    num=0;
-                    for(const i of canvasarr){
-                        await ffmpeg.FS('unlink', `${num}.png`);
-                        num++
-                    }
-                    const video = document.getElementById('output-video');
-                    video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                },3000)
+                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
+                const data = await ffmpeg.FS('readFile', 'out.mp4');
+                console.log({data})
+                for(let i=0;i<canvasarr.length;i++){
+                    await ffmpeg.FS('unlink', `temp.${i}.png`);
+                }
+                const video = document.getElementById('output-video');
+                video.style.display= "block"
+                video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                this.canvasarr=[]
             }
-            merge(canvasarr)
+            let looper2 = setInterval(()=>{
+                console.log({"needed":max,"length":min})
+                if(min>=max){
+                    merge(canvasarr)
+                    clearInterval(looper2)
+                }
+            },1000)
         }
     }
     const first = new zoomer(map,minz,maxz,lat,lon)
@@ -110,7 +113,7 @@
     }
 </script>
 <div class="layout flex">
-    <div class="side-bar h-[100vh] w-48 bg-black border-r-2 border-amber-400">
+    <div class="side-bar h-[100vh] w-[12vw] bg-black border-r-2 border-amber-400">
         <div class="storage flex">
             <span class="text-amber-200 ml-4">storage</span>
             <span class="text-amber-200 my-auto ml-auto mr-4 text-4xl cursor-pointer -mt-4">...</span>
@@ -124,7 +127,7 @@
         {/each}
     </nav>
     <div class="black-bar absolute top-0 left-0 h-[4vh] -z-10 bg-black w-[100vw]"></div>
-    <div class="inp-out ml-64 mt-14 absolute">
+    <div class="inp-out ml-56 mt-14 absolute">
         <div class="params bg-black w-[600px] h-32 mb-4">
             <h3 class="text-amber-200 font-mono px-6 py-2">params</h3>
             <div class="inp-flex flex gap-4">
@@ -138,11 +141,13 @@
                 </div>
             </div>
         </div>
-        <div id="map" class=" border-2 border-black" style='width: 600px; height: 400px;'></div>
+        <div class="map-contain grid grid-flow-col gap-6 w-[80vw] grid-cols-2">
+            <div id="map" class=" border-2 border-black aspect-video "></div>
+            <video src="" id="output-video" class="border-2 border-black aspect-video" style="display:none" controls></video>
+        </div>
         <button on:click={()=>{zoomObjInit()}} class="generate px-4 py-2 bg-lime-500 text-2xl font-serif mt-6">
             generate
         </button>
-        <!-- <video src="" id="output-video" class="border-2 border-black"></video> -->
     </div>
 </div>
 <div id="img"></div>
