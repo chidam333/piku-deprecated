@@ -82,7 +82,6 @@
                     setTimeout(()=>{
                         html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
                             async function(canvas){
-                                document.body.append(canvas)
                                 canvas.toBlob(async(blob)=>{
                                     const arrayBuffer=await blob.arrayBuffer();
                                     canvasarr.push(arrayBuffer)
