@@ -16,7 +16,9 @@
             center: [80.28,13.077], // starting position [lng, lat]
             zoom: 3,
             preserveDrawingBuffer: true // starting zoom
-        }); 
+        });
+        let mapContain = document.querySelector("#map")
+        console.log({"height":mapContain.clientHeight}) 
         ffmpeg = createFFmpeg({ log: true });
         await ffmpeg.load()
 
@@ -104,7 +106,7 @@
                     await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
                     console.log(`Wrote ${i} file`)
                 }
-                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
+                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
@@ -169,7 +171,7 @@
                     await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
                     console.log(`Wrote ${i} file`)
                 }
-                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
+                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
