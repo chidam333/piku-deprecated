@@ -110,9 +110,9 @@
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
-                // for(let i=0;i<canvasarr.length-1;i++){
-                //     await ffmpeg.FS('unlink', `temp.${i}.png`);
-                // }
+                for(let i=0;i<canvasarr.length-1;i++){
+                    await ffmpeg.FS('unlink', `temp.${i}.png`);
+                }
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
@@ -120,6 +120,7 @@
             }
         }
     }
+
     class zoomer{
         constructor(map,min,max,lat,lon){
             this.min=min
@@ -175,9 +176,9 @@
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
-                // for(let i=0;i<canvasarr.length-1;i++){
-                //     await ffmpeg.FS('unlink', `temp.${i}.png`);
-                // }
+                for(let i=0;i<canvasarr.length-1;i++){
+                    await ffmpeg.FS('unlink', `temp.${i}.png`);
+                }
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
@@ -254,7 +255,6 @@
         </button>
     </div>
 </div>
-<div id="img"></div>
 <style>
     .active{
         background: rgb(59, 59, 59);
