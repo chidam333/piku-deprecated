@@ -5,23 +5,92 @@
     import {createFFmpeg,fetchFile} from "@ffmpeg/ffmpeg";
     import html2canvas from 'html2canvas';
     import 'maplibre-gl/dist/maplibre-gl.css';
-    let availableFeatures = ["zooming","panning","tilt","create-itinerary"]
+    let availableFeatures = ["zooming","panning","rotate","create-itinerary"]
     $: active="panning"
     let map=null,ffmpeg;
-    let lon=80.28,lat=13.077,minz=3,maxz=6,lonFrom=80.28,latFrom=13.077,lonTo=-73.9808,latTo=40.7648;
+    let providers=[
+        {tileProvider:"cartoDB.Voyager (nolabel)",links:"https://b.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",type:"raster"},
+        {tileProvider:"cartoDB.Dark (noLabel)",links:"https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",type:"raster"},
+        {tileProvider:"watercolor (stamen)",links:"https://stamen-tiles.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg",type:"raster"},
+        {tileProvider:"satellite",links:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",type:"raster"},
+        {tileProvider:"demoVector",links:"https://demotiles.maplibre.org/style.json",type:"vector"},
+    ]
+    let lon=80.28,lat=13.077,minz=3,maxOnX,maxOnY,realAngle,maxz=6,lonFrom=80.28,latFrom=13.077,lonTo=-73.9808,latTo=40.7648,pitch=0,providerSelection=providers[3],ffmpegLoaded=false,bearing=0;
     onMount(async()=>{
+        ffmpeg = createFFmpeg({ log: true });
+        await ffmpeg.load().then(()=>{
+            ffmpegLoaded=true
+        })
+        let satelliteStyle = {
+                "version": 8,
+                "sources": {
+                    "raster-tile-source": {
+                    "type": "raster",
+                    "tiles": [providers[3].links],
+                    "tileSize": 256
+                    }
+                },
+                "layers": [
+                    {
+                    "id": "raster-tile-layer",
+                    "type": "raster",
+                    "source": "raster-tile-source"
+                    }
+                ]
+            };
         map = new maplibregl.Map({
             container: 'map',
-            style: 'https://demotiles.maplibre.org/style.json', // stylesheet location
+            style: satelliteStyle, // stylesheet location
             center: [80.28,13.077], // starting position [lng, lat]
             zoom: 3,
             preserveDrawingBuffer: true // starting zoom
         });
         let mapContain = document.querySelector("#map")
-        console.log({"height":mapContain.clientHeight}) 
-        ffmpeg = createFFmpeg({ log: true });
-        await ffmpeg.load()
-
+        const maprect = mapContain.getClientRects()
+        let [centerX,centerY] = [maprect[0].left+(maprect[0].width/2),maprect[0].top+maprect[0].height/2]
+        let bottomEdge = maprect[0].bottom-centerY
+        let zero = document.querySelector("span")
+        zero.textContent="0"
+        zero.style.position = "absolute"
+        zero.style.top=`${maprect[0].bottom}px`
+        zero.style.left=`${centerX}px`
+        zero.style.marginTop=`.5rem`
+        let maxOnX = Math.atan((maprect[0].width/2)/(maprect[0].height/2))*(180/Math.PI)
+        let maxOnY = Math.atan((maprect[0].height/2)/(maprect[0].width/2))*(180/Math.PI)
+        console.log({maxOnX})
+        console.log({maxOnY})
+        document.addEventListener("mousemove", (event)=>{
+            let mapContain = document.querySelector("#map")
+            let tracker = document.querySelector(".bearingTracker")
+            const maprect = mapContain.getClientRects()
+            let [centerX,centerY] = [maprect[0].left+(maprect[0].width/2),maprect[0].top+maprect[0].height/2]
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+            if(mouseX>=centerX && mouseY<=centerY){
+                const angle = Math.atan((centerY-mouseY)/(mouseX-centerX))*(180/Math.PI)
+                console.log({angle})
+                realAngle=90+angle
+                tracker.textContent=realAngle
+                if(angle>maxOnY && angle<90){
+                    tracker.style.top=maprect[0].top+'px'
+                    tracker.style.left=centerY+Math.tan((90-angle)*(Math.PI/180))*maprect[0].height/2+'px';
+                    tracker.style.marginTop=-tracker.clientHeight+'px'
+                }else if(angle<maxOnY){
+                    tracker.style.left=maprect[0].right+'px'
+                    console.log({angle})
+                    tracker.style.top=centerY-Math.tan((angle)*(Math.PI/180))*maprect[0].width/2+'px';
+                }
+            }else if(mouseX>centerX && mouseY>centerY){
+                const angle = Math.atan((mouseY-centerY)/(mouseX-centerX))*(180/Math.PI)
+                realAngle=270+angle
+            }else if(mouseX<=centerX && mouseY>=centerY){
+                const angle =90-Math.atan((mouseY-centerY)/(centerX-mouseX))*(180/Math.PI)
+                realAngle=angle
+            }else if(mouseX<centerX && mouseY<centerY){
+                const angle = Math.atan((centerY-mouseY)/(centerX-mouseX))*(180/Math.PI)
+                realAngle=90+angle
+            }
+        });
     })
     class panner{
         constructor(map,latFrom,lonFrom,latTo,lonTo){
@@ -57,7 +126,7 @@
             }
             if(latFrom>latTo){
                 isDown=true
-                yDist=this.latFrom-latTo
+                yDist=this.latFrom-this.latTo
             }else{
                 isDown=false
                 yDist=this.latTo-this.latFrom
@@ -90,7 +159,7 @@
                                 })
                                 if(isLeft){lonFrom-=xStep;}
                                 else{lonFrom+=xStep;}
-                                if(isDown){latFrom+=yStep;}
+                                if(isDown){latFrom-=yStep;}
                                 else{
                                     latFrom+=yStep;
                                 }
@@ -120,7 +189,16 @@
             }
         }
     }
-
+    class rotate{
+        constructor(map,lat,lon,pitch){
+            this.map=map
+            this.lat=lat
+            this.lon=lon
+            this.pitch=pitch
+            this.skip=false
+            this.canvasarr=[]
+        }
+    }
     class zoomer{
         constructor(map,min,max,lat,lon){
             this.min=min
@@ -186,21 +264,54 @@
             }
         }
     }
-    const first = new zoomer(map,minz,maxz,lat,lon)
     const zoomObjInit=()=>{
+        let first = new zoomer(map,minz,maxz,lat,lon)
         first.zoom()
     }
     const PanObjInit=()=>{
-        const panobj = new panner(map,latFrom,lonFrom,latTo,lonTo)
+        let panobj = new panner(map,latFrom,lonFrom,latTo,lonTo)
         panobj.pan()
     }
-    const updateFirst=()=>{
-        first.min=minz;
-        first.max=maxz;
-        first.lat=lat;
-        first.lon=lon;
-        first.setView();
-    }  
+    const changeMap = (link,type)=>{
+        if(type=="raster"){
+            let newStyle = {
+                "version": 8,
+                "sources": {
+                    "raster-tile-source": {
+                    "type": "raster",
+                    "tiles": [link],
+                    "tileSize": 256
+                    }
+                },
+                "layers": [
+                    {
+                    "id": "raster-tile-layer",
+                    "type": "raster",
+                    "source": "raster-tile-source"
+                    }
+                ]
+            };
+            map.setStyle(newStyle)
+        }else{
+            map.setStyle(link)
+        }
+    }
+    const changePitch = ()=>{
+        map.setPitch(pitch)
+    }
+    const changeBearing = ()=>{
+        map.setBearing(bearing)
+    }
+    const updateLatLan = ()=>{
+        map.flyTo({
+                center: [lon,lat],
+                zoom: 4,
+                duration: 0
+        });
+    }
+    const updateZoom = ()=>{
+        map.setZoom(minz)
+    }
 </script>
 <div class="layout flex">
     <div class="side-bar h-[100vh] w-[12vw] bg-black border-r-2 border-amber-400">
@@ -218,43 +329,70 @@
     </nav>
     <div class="black-bar absolute top-0 left-0 h-[4vh] -z-10 bg-black w-[100vw]"></div>
     <div class="inp-out ml-56 mt-14 absolute">
-        <div class="params bg-black max-w-[800px] h-32 mb-4">
-            <h3 class="text-amber-200 font-mono px-6 py-2">params</h3>
+        <div class="params bg-black max-w-[900px] h-32 mb-4">
+            <div class="params-nav flex">
+                <h3 class="text-amber-200 font-mono pl-6 py-2">params</h3>
+                <div class="ml-auto">
+                    <label for="pitch" class="text-amber-200 font-mono">pitch (0-60) :&nbsp;<input type="number" class="pitchBearInput pl-2 rounded-xl" step="0.01" id="pitch" bind:value={pitch} on:input={()=>{changePitch()}} ></label>
+                    <label for="bearing" class="text-amber-200 font-mono">bearing (0-360) :&nbsp;<input type="number" class="pitchBearInput pl-2 rounded-xl" step="0.01" id="bearing" bind:value={bearing} on:input={()=>{changeBearing()}} ></label>
+                </div>
+            </div>
             <div class="inp-flex flex gap-4">
                 {#if active=="zooming"}
                     <div class="grid gap-2 ml-4">
-                        <label for="lat" class="text-amber-200 font-mono">lat :&nbsp;<input type="number" class="text-black" step="0.01" id="lat" bind:value={lat} on:input={updateFirst}></label>
-                        <label for="lon" class="text-amber-200 font-mono">lon :&nbsp;<input type="number" class="text-black" step="0.01" id="lon" bind:value={lon} on:input={updateFirst}></label>
+                        <label for="lat" class="text-amber-200 font-mono">lat :&nbsp;<input type="number" class="text-black" step="0.01" id="lat" bind:value={lat} on:input={()=>{updateLatLan()}}></label>
+                        <label for="lon" class="text-amber-200 font-mono">lon :&nbsp;<input type="number" class="text-black" step="0.01" id="lon" bind:value={lon} on:input={()=>{updateLatLan()}}></label>
                     </div>
                     <div class="grid gap-2 ml-4">
-                        <label for="min-zoom" class="text-amber-200 font-mono">min-zoom :&nbsp;<input type="number" class="text-black" id="min-zoom" bind:value={minz} on:input={updateFirst}></label>
-                        <label for="max-zoom" class="text-amber-200 font-mono">max-zoom :&nbsp;<input type="number" class="text-black" id="max-zoom" bind:value={maxz} on:input={updateFirst}></label>
+                        <label for="min-zoom" class="text-amber-200 font-mono">min-zoom :&nbsp;<input type="number" class="text-black" id="min-zoom" bind:value={minz} on:input={()=>{updateZoom()}}></label>
+                        <label for="max-zoom" class="text-amber-200 font-mono">max-zoom :&nbsp;<input type="number" class="text-black" id="max-zoom" bind:value={maxz}></label>
+                    </div>
+                    {/if}
+                    {#if active=="panning"}
+                    <div class="grid gap-2 ml-4">
+                        <label for="latPanfrom" class="text-amber-200 font-mono">lat-from :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanfrom" bind:value={lat} on:input={()=>{updateLatLan()}}></label>
+                        <label for="lonPAnfrom" class="text-amber-200 font-mono">lon-from :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanfrom" bind:value={lon} on:input={()=>{updateLatLan()}}></label>
+                    </div>
+                    <div class="grid gap-2 ml-4">
+                        <label for="latPanto" class="text-amber-200 font-mono">lat-to :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanto" bind:value={latTo}></label>
+                        <label for="lonPAnto" class="text-amber-200 font-mono">lon-to :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanto" bind:value={lonTo}></label>
+                    </div>
+                    <div class="grid gap-2 ml-4">
+                        <label for="zoom" class="text-amber-200 font-mono">zoom :&nbsp;<input type="number" class="text-black" id="zoom" bind:value={minz} on:input={()=>{updateZoom()}}></label>
                     </div>
                 {/if}
-                {#if active=="panning"}
-                    <div class="grid gap-2 ml-4">
-                        <label for="latPanfrom" class="text-amber-200 font-mono">lat-from :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanfrom" bind:value={latFrom} on:input={updateFirst}></label>
-                        <label for="lonPAnfrom" class="text-amber-200 font-mono">lon-from :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanfrom" bind:value={lonFrom} on:input={updateFirst}></label>
+                {#if active=="rotate"}
+                <div class="grid gap-2 ml-4">
+                        <label for="lat" class="text-amber-200 font-mono">lat :&nbsp;<input type="number" class="text-black" step="0.01" id="lat" bind:value={lat} on:input={()=>{updateLatLan()}}></label>
+                        <label for="lon" class="text-amber-200 font-mono">lon :&nbsp;<input type="number" class="text-black" step="0.01" id="lon" bind:value={lon} on:input={()=>{updateLatLan()}}></label>
                     </div>
-                    <div class="grid gap-2 ml-4">
-                        <label for="latPanto" class="text-amber-200 font-mono">lat-to :&nbsp;<input type="number" class="text-black" step="0.01" id="latPanto" bind:value={latTo} on:input={updateFirst}></label>
-                        <label for="lonPAnto" class="text-amber-200 font-mono">lon-to :&nbsp;<input type="number" class="text-black" step="0.01" id="lonPanto" bind:value={lonTo} on:input={updateFirst}></label>
-                    </div>
-                {/if}
+                    {/if}
             </div>
         </div>
+        <select bind:value={providerSelection} class="select text-amber-200 bg-black rounded-lg p-2 mb-4" on:change={()=>{changeMap(providerSelection.links,providerSelection.type)}}>
+            {#each providers as provider}
+                <option value={provider}>{provider.tileProvider}</option>
+            {/each}
+        </select>
         <div class="map-contain grid grid-flow-col gap-6 w-[80vw] grid-cols-2">
-            <div id="map" class=" border-2 border-black aspect-video "></div>
+            <div id="map" class="border-2 border-black aspect-video "></div>
             <video src="" id="output-video" class="border-2 border-black aspect-video" style="display:none" controls></video>
         </div>
+        {#if ffmpegLoaded}
         <button on:click={()=>{
             if(active=="zooming"){zoomObjInit()}
             if(active=="panning"){PanObjInit()}
+            if(active=="rotate"){rotateInit()}
         }} class="generate px-4 py-2 bg-lime-500 text-2xl font-serif mt-6">
             generate
         </button>
+        {:else}
+        <div class="loading text-red-900">ffmpeg loading (don't fret it happens only the first time you open our web app in your device)</div>
+        {/if}
     </div>
 </div>
+<!-- {realAngle} -->
+<span class="bearingTracker bg-black border-2 border-amber-500 text-amber-200 absolute p-1"></span>
 <style>
     .active{
         background: rgb(59, 59, 59);
@@ -263,5 +401,7 @@
     .storage span{
         font-family: "ROboto";
     }
-
+    .pitchBearInput{
+        background: rgb(245, 222, 179,0.3);
+    }
 </style>
