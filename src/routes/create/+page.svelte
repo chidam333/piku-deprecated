@@ -188,15 +188,88 @@
                 this.canvasarr=[]
             }
         }
+        reset(latFrom,lonFrom,latTo,lonTo){
+            this.latFrom=latFrom
+            this.lonFrom=lonFrom
+            this.latTo=latTo
+            this.lonTo=lonTo
+            this.pan()
+        }
     }
     class rotate{
-        constructor(map,lat,lon,pitch){
+        constructor(map,lat,lon,pitch,zoom){
             this.map=map
             this.lat=lat
             this.lon=lon
             this.pitch=pitch
             this.skip=false
+            this.zoom = zoom
             this.canvasarr=[]
+            this.setView()
+        }
+        setView(){
+            map.flyTo({
+                center: [this.lon, this.lat],
+                zoom: this.zoom,
+                duration: 0
+            });
+        }
+        rotate(){
+            let canvasarr = this.canvasarr
+            let zoom = this.zoom
+            let lng = this.lon
+            let lat = this.lat
+            let skip = false
+            let angle =0;
+            let looper = setInterval(()=>{
+                if(skip==false){
+                    if(angle>=360){
+                        clearInterval(looper)
+                        merge(canvasarr)
+                    }
+                    map.setBearing(angle)
+                    skip=true
+                    setTimeout(()=>{
+                        html2canvas(document.getElementById("map"),{allowTaint:true,useCORS:true}).then(
+                            async(canvas)=>{
+                                canvas.toBlob(async(blob)=>{
+                                    const arrayBuffer = await blob.arrayBuffer()
+                                    canvasarr.push(arrayBuffer)
+                                })
+                                angle+=1
+                                console.log({angle})
+                                skip=false
+                            }
+                        )
+                    },200)
+                }
+            },200)
+            const merge = async(canvasarr)=>{
+                console.log({canvasarr})
+                for(let i=0;i<canvasarr.length;i++){
+                    await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
+                    console.log(`Wrote ${i} file`)
+                }
+                await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
+                const data = await ffmpeg.FS('readFile', 'out.mp4');
+                console.log({data})
+                console.log({canvasarrLen:canvasarr.length})
+                for(let i=0;i<canvasarr.length-1;i++){
+                    await ffmpeg.FS('unlink', `temp.${i}.png`);
+                }
+                const video = document.getElementById('output-video');
+                video.style.display= "block"
+                video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                this.canvasarr=[]
+            }
+        }
+        reset(lat,lon,pitch,zoom){
+            this.lat=lat
+            this.lon=lon
+            this.pitch=pitch
+            this.zoom=zoom
+            this.setView()
+            this.rotate()
         }
     }
     class zoomer{
@@ -263,14 +336,40 @@
                 this.canvasarr=[]
             }
         }
+        reset(minz,maxz,lat,lon){
+            this.min=minz
+            this.max=maxz
+            this.lat=lat
+            this.lon=lon
+            this.zoom()
+        }
     }
     const zoomObjInit=()=>{
-        let first = new zoomer(map,minz,maxz,lat,lon)
-        first.zoom()
+        let zoomObj;
+        if(zoomObj==null || zoomObj==undefined){
+            zoomObj = new zoomer(map,minz,maxz,lat,lon)
+            zoomObj.zoom()
+        }else{
+            zoomObj.reset(minz,maxz,lat,lon)
+        }
+    }
+    const rotateInit=()=>{
+        let rotateObj
+        if(rotateObj==undefined){
+            rotateObj = new rotate(map,lat,lon,pitch,minz)
+            rotateObj.rotate()
+        }else{
+            rotateObj.reset(lat,lon,pitch,zoom)
+        }
     }
     const PanObjInit=()=>{
-        let panobj = new panner(map,latFrom,lonFrom,latTo,lonTo)
-        panobj.pan()
+        let panObj
+        if(panObj==undefined){
+            panObj = new panner(map,latFrom,lonFrom,latTo,lonTo)
+            panObj.pan()
+        }else{
+            panObj.reset(latFrom,lonFrom,latTo,lonTo)
+        }
     }
     const changeMap = (link,type)=>{
         if(type=="raster"){
