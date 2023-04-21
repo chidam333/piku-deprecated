@@ -70,10 +70,11 @@
                 const angle = Math.atan((centerY-mouseY)/(mouseX-centerX))*(180/Math.PI)
                 console.log({angle})
                 realAngle=90+angle
-                tracker.textContent=realAngle
-                if(angle>maxOnY && angle<90){
+                tracker.textContent=Math.round(realAngle)
+                if(angle>maxOnY && angle<=90){
                     tracker.style.top=maprect[0].top+'px'
-                    tracker.style.left=centerY+Math.tan((90-angle)*(Math.PI/180))*maprect[0].height/2+'px';
+                    console.log({centerY,value:centerY+Math.tan((90-angle)*(Math.PI/180))*maprect[0].height/2+'px'})
+                    tracker.style.left=centerX+Math.tan((90-angle)*(Math.PI/180))*maprect[0].height/2+'px';
                     tracker.style.marginTop=-tracker.clientHeight+'px'
                 }else if(angle<maxOnY){
                     tracker.style.left=maprect[0].right+'px'
@@ -82,18 +83,47 @@
                 }
             }else if(mouseX>centerX && mouseY>centerY){
                 const angle = Math.atan((mouseY-centerY)/(mouseX-centerX))*(180/Math.PI)
-                realAngle=270+angle
-            }else if(mouseX<=centerX && mouseY>=centerY){
-                const angle =90-Math.atan((mouseY-centerY)/(centerX-mouseX))*(180/Math.PI)
                 realAngle=angle
-            }else if(mouseX<centerX && mouseY<centerY){
-                const angle = Math.atan((centerY-mouseY)/(centerX-mouseX))*(180/Math.PI)
-                realAngle=90+angle
+                tracker.textContent=Math.round(realAngle)
+                if(angle<maxOnY && angle<=90){
+                    tracker.style.left=maprect[0].right+'px'
+                    tracker.style.top = centerY+Math.tan((angle)*(Math.PI/180))*maprect[0].width/2+'px'
+                }else if(angle>maxOnY && angle<=90){
+                    tracker.style.top = maprect[0].bottom+'px'
+                    tracker.style.left = centerX+Math.tan((90-angle)*(Math.PI/180))*maprect[0].height/2+'px'
+                    tracker.style.marginTop = '0px'
+                }
+            }else if(mouseX<=centerX && mouseY>=centerY){
+                const angle =Math.atan((mouseY-centerY)/(centerX-mouseX))*(180/Math.PI)
+                realAngle=270+angle
+                tracker.textContent=Math.round(realAngle)
+                if(angle<maxOnY && angle<=90){
+                    tracker.style.left=maprect[0].left+'px'
+                    tracker.style.marginRight=tracker.clientWidth
+                    tracker.style.top = centerY+Math.tan((angle)*Math.PI/180)*maprect[0].width/2+'px'
+                }else if(angle>maxOnY && angle<=90){
+                    tracker.style.top=maprect[0].bottom+'px'
+                    tracker.style.left=maprect[0].left+maprect[0].width/2-Math.tan((90-angle)*Math.PI/180)*maprect[0].height/2+'px'
+                    // tracker.style.marginTop
+                }
+            }else if(mouseX<=centerX && mouseY<=centerY){
+                const angle = Math.atan((centerX-mouseX)/(centerY-mouseY))*(180/Math.PI)
+                console.log({wowangle:angle})
+                realAngle=180+angle
+                tracker.textContent=Math.round(realAngle)
+                if(angle>maxOnX && angle<=90){
+                    tracker.style.left = maprect[0].left+'px'
+                    tracker.style.marginLeft = -tracker.clientWidth+'px'
+                    tracker.style.top = maprect[0].top+maprect[0].height/2-Math.tan((90-angle)*(Math.PI/180))*maprect[0].width/2+'px'
+                }else if(angle<maxOnX && angle<=90){
+                    tracker.style.top = maprect[0].top + 'px'
+                    tracker.style.left = centerX-Math.tan((angle)*Math.PI/180)*maprect[0].height/2+'px'
+                }
             }
         });
     })
     class panner{
-        constructor(map,latFrom,lonFrom,latTo,lonTo){
+        constructor(map,latFrom,lonFrom,latTo,lonTo,zoom){
             this.map=map
             this.latFrom=latFrom
             this.lonFrom=lonFrom
@@ -101,7 +131,7 @@
             this.lonTo=lonTo
             this.canvasarr=[]
             this.skip=false
-            this.zoom=3
+            this.zoom=zoom
             this.time=2000
             this.factor=30
         }
@@ -150,8 +180,9 @@
                         duration:0
                     })
                     skip=true
-                    setTimeout(()=>{
-                        html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
+                    setTimeout(async()=>{
+                        await map.loaded()
+                        await html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
                             async function(canvas){
                                 canvas.toBlob(async(blob)=>{
                                     const arrayBuffer=await blob.arrayBuffer();
@@ -170,16 +201,19 @@
                 }
             },200)
             const merge = async(canvasarr)=>{
-                console.log({canvasarr})
-                for(let i=0;i<canvasarr.length;i++){
+                console.log({len:canvasarr.length})
+                let filesWritten,i=0;
+                for(i=0;i<canvasarr.length;i++){
                     await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
                     console.log(`Wrote ${i} file`)
+                    filesWritten=i
                 }
+                filesWritten=i;
                 await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
-                for(let i=0;i<canvasarr.length-1;i++){
+                for(let i=0;i<filesWritten;i++){
                     await ffmpeg.FS('unlink', `temp.${i}.png`);
                 }
                 const video = document.getElementById('output-video');
@@ -230,11 +264,18 @@
                     map.setBearing(angle)
                     skip=true
                     setTimeout(()=>{
+                        map.loaded()
                         html2canvas(document.getElementById("map"),{allowTaint:true,useCORS:true}).then(
                             async(canvas)=>{
-                                canvas.toBlob(async(blob)=>{
-                                    const arrayBuffer = await blob.arrayBuffer()
+                                canvas.toBlob((blob)=>{
+                                    const arrayBuffer = blob.arrayBuffer()
                                     canvasarr.push(arrayBuffer)
+                                    let imageURL =URL.createObjectURL(blob)
+                                    console.log({imageURL})
+                                    const image = document.createElement('img')
+                                    image.src= imageURL 
+                                    document.body.appendChild(image)
+                                    // URL.revokeObjectURL(imageURL);
                                 })
                                 angle+=1
                                 console.log({angle})
@@ -245,23 +286,24 @@
                 }
             },200)
             const merge = async(canvasarr)=>{
-                console.log({canvasarr})
-                for(let i=0;i<canvasarr.length;i++){
+                console.log({len:canvasarr.length})
+                let filesWritten,i=0;
+                for(i=0;i<canvasarr.length;i++){
                     await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
                     console.log(`Wrote ${i} file`)
                 }
+                filesWritten=i;
                 await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
-                for(let i=0;i<canvasarr.length-1;i++){
+                for(let i=0;i<filesWritten-1;i++){
                     await ffmpeg.FS('unlink', `temp.${i}.png`);
                 }
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                this.canvasarr=[]
-            }
+                this.canvasarr=[]            }
         }
         reset(lat,lon,pitch,zoom){
             this.lat=lat
@@ -305,7 +347,9 @@
                     }
                     map.setZoom(min)
                     skip=true
-                    setTimeout(()=>{html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
+                    setTimeout(()=>{
+                        map.loaded()
+                        html2canvas(document.getElementById('map'),{allowTaint:true,useCORS:true}).then(
                         async function(canvas){
                             canvas.toBlob(async(blob)=>{
                                 const arrayBuffer = await blob.arrayBuffer();
@@ -318,23 +362,24 @@
                 }
             },200)
             const merge = async(canvasarr)=>{
-                console.log({canvasarr})
-                for(let i=0;i<canvasarr.length;i++){
+                console.log({len:canvasarr.length})
+                let filesWritten,i=0;
+                for(i=0;i<canvasarr.length;i++){
                     await ffmpeg.FS('writeFile', `temp.${i}.png`, new Uint8Array(canvasarr[i]));
                     console.log(`Wrote ${i} file`)
                 }
+                filesWritten=i;
                 await ffmpeg.run('-i','temp.%d.png','-c:v', 'libx264','-vf', "scale=trunc(iw/2)*2:trunc(ih/2)*2",'-r','30', '-pix_fmt', 'yuv420p', 'out.mp4')
                 const data = await ffmpeg.FS('readFile', 'out.mp4');
                 console.log({data})
                 console.log({canvasarrLen:canvasarr.length})
-                for(let i=0;i<canvasarr.length-1;i++){
+                for(let i=0;i<filesWritten-1;i++){
                     await ffmpeg.FS('unlink', `temp.${i}.png`);
                 }
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                this.canvasarr=[]
-            }
+                this.canvasarr=[]            }
         }
         reset(minz,maxz,lat,lon){
             this.min=minz
@@ -359,16 +404,16 @@
             rotateObj = new rotate(map,lat,lon,pitch,minz)
             rotateObj.rotate()
         }else{
-            rotateObj.reset(lat,lon,pitch,zoom)
+            rotateObj.reset(lat,lon,pitch,minz)
         }
     }
     const PanObjInit=()=>{
         let panObj
         if(panObj==undefined){
-            panObj = new panner(map,latFrom,lonFrom,latTo,lonTo)
+            panObj = new panner(map,latFrom,lonFrom,latTo,lonTo,minz)
             panObj.pan()
         }else{
-            panObj.reset(latFrom,lonFrom,latTo,lonTo)
+            panObj.reset(latFrom,lonFrom,latTo,lonTo,minz)
         }
     }
     const changeMap = (link,type)=>{
@@ -468,13 +513,13 @@
                     {/if}
             </div>
         </div>
-        <select bind:value={providerSelection} class="select text-amber-200 bg-black rounded-lg p-2 mb-4" on:change={()=>{changeMap(providerSelection.links,providerSelection.type)}}>
+        <select bind:value={providerSelection} class="select text-amber-200 bg-black rounded-lg p-2 mb-10" on:change={()=>{changeMap(providerSelection.links,providerSelection.type)}}>
             {#each providers as provider}
                 <option value={provider}>{provider.tileProvider}</option>
             {/each}
         </select>
         <div class="map-contain grid grid-flow-col gap-6 w-[80vw] grid-cols-2">
-            <div id="map" class="border-2 border-black aspect-video "></div>
+            <div id="map" class="border-2 border-black aspect-video"></div>
             <video src="" id="output-video" class="border-2 border-black aspect-video" style="display:none" controls></video>
         </div>
         {#if ffmpegLoaded}
@@ -492,6 +537,7 @@
 </div>
 <!-- {realAngle} -->
 <span class="bearingTracker bg-black border-2 border-amber-500 text-amber-200 absolute p-1"></span>
+<img id="imgtest" src=""/>
 <style>
     .active{
         background: rgb(59, 59, 59);
