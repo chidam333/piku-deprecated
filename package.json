@@ -22,6 +22,7 @@
 		"@ffmpeg/core": "^0.11.0",
 		"@ffmpeg/ffmpeg": "^0.11.6",
 		"@googlemaps/js-api-loader": "^1.14.3",
+		"@vercel/analytics": "^1.0.0",
 		"bcrypt": "^5.0.1",
 		"bcryptjs": "^2.4.3",
 		"crypto-js": "^4.1.1",
