@@ -15,7 +15,7 @@
         {tileProvider:"satellite",links:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",type:"raster"},
         {tileProvider:"demoVector",links:"https://demotiles.maplibre.org/style.json",type:"vector"},
     ]
-    let lon=80.28,lat=13.077,minz=3,maxOnX,maxOnY,realAngle,maxz=6,lonFrom=80.28,latFrom=13.077,lonTo=-73.9808,latTo=40.7648,pitch=0,providerSelection=providers[3],ffmpegLoaded=false,bearing=0;
+    let lon=80.28,lat=13.077,minz=3,maxOnX,maxOnY,realAngle,maxz=6,lonFrom=80.28,latFrom=13.077,lonTo=-73.9808,latTo=40.7648,pitch=0,providerSelection=providers[3],ffmpegLoaded=false,bearing=0,generating=false;
     onMount(async()=>{
         ffmpeg = createFFmpeg({ log: true });
         await ffmpeg.load().then(()=>{
@@ -143,6 +143,7 @@
             })
         }
         pan(){
+            generating=true
             let xDist,yDist;
             let isLeft,isDown;
             let xStep,yStep;
@@ -220,6 +221,7 @@
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
                 this.canvasarr=[]
+                generating=false
             }
         }
         reset(latFrom,lonFrom,latTo,lonTo){
@@ -249,6 +251,7 @@
             });
         }
         rotate(){
+            generating=true
             let canvasarr = this.canvasarr
             let zoom = this.zoom
             let lng = this.lon
@@ -270,12 +273,6 @@
                                 canvas.toBlob((blob)=>{
                                     const arrayBuffer = blob.arrayBuffer()
                                     canvasarr.push(arrayBuffer)
-                                    let imageURL =URL.createObjectURL(blob)
-                                    console.log({imageURL})
-                                    const image = document.createElement('img')
-                                    image.src= imageURL 
-                                    document.body.appendChild(image)
-                                    // URL.revokeObjectURL(imageURL);
                                 })
                                 angle+=1
                                 console.log({angle})
@@ -303,7 +300,9 @@
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                this.canvasarr=[]            }
+                this.canvasarr=[]
+                generating=false
+            }
         }
         reset(lat,lon,pitch,zoom){
             this.lat=lat
@@ -333,6 +332,7 @@
             });
         }
         zoom(){
+            generating=true
             let canvasarr = this.canvasarr
             let min = this.min
             let max = this.max
@@ -379,7 +379,9 @@
                 const video = document.getElementById('output-video');
                 video.style.display= "block"
                 video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                this.canvasarr=[]            }
+                this.canvasarr=[]
+                generating=false
+            }
         }
         reset(minz,maxz,lat,lon){
             this.min=minz
@@ -523,6 +525,9 @@
             <video src="" id="output-video" class="border-2 border-black aspect-video" style="display:none" controls></video>
         </div>
         {#if ffmpegLoaded}
+        {#if generating}
+        <div class="wait px-4 py-2 bg-red-500 text-2xl font-serif mt-6 max-w-fit">rendering</div>
+        {:else}
         <button on:click={()=>{
             if(active=="zooming"){zoomObjInit()}
             if(active=="panning"){PanObjInit()}
@@ -530,6 +535,7 @@
         }} class="generate px-4 py-2 bg-lime-500 text-2xl font-serif mt-6">
             generate
         </button>
+        {/if}
         {:else}
         <div class="loading text-red-900">ffmpeg loading (don't fret it happens only the first time you open our web app in your device)</div>
         {/if}
@@ -537,7 +543,6 @@
 </div>
 <!-- {realAngle} -->
 <span class="bearingTracker bg-black border-2 border-amber-500 text-amber-200 absolute p-1"></span>
-<img id="imgtest" src=""/>
 <style>
     .active{
         background: rgb(59, 59, 59);
